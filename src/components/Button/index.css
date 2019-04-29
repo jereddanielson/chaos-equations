@@ -1,0 +1,8 @@
+.chaos-button {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.chaos-button:hover,
+.chaos-button:focus {
+  background: rgba(0, 144, 255, 0.25);
+}

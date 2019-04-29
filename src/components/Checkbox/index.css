@@ -1,0 +1,16 @@
+.chaos-checkbox {
+  border: 2px solid rgba(0, 144, 255, 0.5);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.chaos-checkbox.active {
+  background: rgb(0, 144, 255);
+}
+
+.chaos-checkbox-label input:focus + .chaos-checkbox {
+  border: 2px solid rgb(0, 144, 255);
+}
+
+.chaos-checkbox-label input:focus + .chaos-checkbox.active {
+  background: rgba(0, 144, 255, 0.5);
+}

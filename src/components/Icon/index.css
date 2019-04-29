@@ -1,0 +1,10 @@
+.chaos-icon {
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  color: #ddd;
+}
+
+.chaos-icon:hover,
+.chaos-icon:focus {
+  background: rgba(0, 144, 255, 0.5);
+}

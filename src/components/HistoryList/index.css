@@ -1,0 +1,4 @@
+.chaos-history-item:hover,
+.chaos-history-item.active {
+  background: rgba(0, 144, 255, 0.5);
+}
