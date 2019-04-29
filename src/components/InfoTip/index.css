@@ -1,0 +1,20 @@
+.chaos-info-tip {
+  cursor: pointer;
+}
+
+.chaos-info-tip .icon-info {
+  color: #eee;
+  opacity: 0.75;
+}
+
+.chaos-info-tip:hover .icon-info {
+  opacity: 1;
+}
+
+.chaos-info-tip .chaos-info-tip-inner {
+  display: none;
+}
+
+.chaos-info-tip:hover .chaos-info-tip-inner {
+  display: block;
+}

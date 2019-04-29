@@ -1,0 +1,21 @@
+@keyframes bganim {
+  from {
+    background-position: 100% 100%;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+.chaos-text-input {
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(0, 144, 255, 0.25),
+    rgba(0, 144, 255, 0.25) 10px,
+    rgba(0, 0, 0, 0.5) 10px,
+    rgba(0, 0, 0, 0.5) 20px
+  );
+  background-size: 200% 200%;
+  background-position: 0 0;
+  animation: bganim 10s linear infinite;
+}

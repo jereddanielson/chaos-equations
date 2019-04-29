@@ -1,0 +1,46 @@
+{
+  "name": "chaos-equations",
+  "version": "1.1.5",
+  "description": "Visualization and animation of real time dynamic chaos equations",
+  "author": "Jered Danielson <jered@uw.edu>",
+  "license": "MIT",
+  "scripts": {
+    "start": "node server.js",
+    "build": "rm -rf dist && parcel build src/index.html",
+    "dev": "parcel src/index.html"
+  },
+  "dependencies": {
+    "express": "^4.16.4",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "reset-css": "^4.0.1",
+    "stats-js": "^1.0.0",
+    "three": "^0.103.0"
+  },
+  "engines": {
+    "node": "8.x"
+  },
+  "repository": {
+    "url": "https://glitch.com/edit/#!/chaos-equations"
+  },
+  "license": "MIT",
+  "keywords": [
+    "node",
+    "glitch",
+    "express",
+    "parcel",
+    "react",
+    "react-router",
+    "chaos",
+    "animations",
+    "visualizations",
+    "three.js"
+  ],
+  "devDependencies": {
+    "@babel/core": "^7.2.0",
+    "@babel/preset-env": "^7.2.0",
+    "@babel/preset-react": "^7.0.0",
+    "parcel-bundler": "^1.12.3",
+    "babel-plugin-transform-class-properties": "^6.24.1"
+  }
+}
