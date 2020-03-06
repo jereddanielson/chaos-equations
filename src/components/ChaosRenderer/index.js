@@ -41,6 +41,11 @@ export default class ChaosRenderer extends React.Component {
     const c = new THREE.Color("hsl(" + (i % 360) + ", 100%, 50%)");
     return { r: c.r, g: c.g, b: c.b };
   }
+  /**
+   * Generate quasi-random color based on input number
+   * @param {number} i Input number
+   * @returns {Color}
+   */
   static getRandColor(i) {
     const r = Math.min(255, 50 + ((i * 11909) % 256));
     const g = Math.min(255, 50 + ((i * 52973) % 256));
@@ -55,7 +60,7 @@ export default class ChaosRenderer extends React.Component {
       const renderer = new THREE.WebGLRenderer({
         preserveDrawingBuffer: true, // allows for fancy fading trails
         antialias: true,
-        powerPreference: "high-performance"
+        powerPreference: "high-performance",
       });
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(element.offsetWidth, element.offsetHeight);
@@ -86,7 +91,7 @@ export default class ChaosRenderer extends React.Component {
         colorOffset = 0,
         pointSize = 1,
         scaleFactor = 1,
-        trailPersistence = 0.03
+        trailPersistence = 0.03,
       } = props;
       const scene = new THREE.Scene();
       this.scene = scene;
@@ -127,7 +132,7 @@ export default class ChaosRenderer extends React.Component {
         size: pointSize,
         vertexColors: THREE.VertexColors,
         transparent: true,
-        opacity: 1 - attenuation
+        opacity: 1 - attenuation,
         // blending: THREE.AdditiveBlending,
       });
 
@@ -139,14 +144,14 @@ export default class ChaosRenderer extends React.Component {
       this.points = points;
 
       // Fading trails plane
-      const tpVal = 1 - trailPersistence * trailPersistence;
+      const tpVal = 1 - trailPersistence;
       const fadeColor = new THREE.Color(tpVal, tpVal, tpVal);
       const fadeGeometry = new THREE.PlaneGeometry(
         camera.right * 8,
         camera.top * 8
       );
       const fadeMaterial = new THREE.MeshBasicMaterial({
-        color: fadeColor
+        color: fadeColor,
       });
       fadeMaterial.blending = THREE.CustomBlending;
       fadeMaterial.blendSrc = THREE.OneFactor;
@@ -178,7 +183,7 @@ export default class ChaosRenderer extends React.Component {
         "Click",
         "TouchStart",
         "TouchMove",
-        "TouchEnd"
+        "TouchEnd",
       ].forEach(ea => {
         if (typeof this.props[`on${ea}`] === "function") {
           renderer.domElement.addEventListener(ea.toLowerCase(), e => {
@@ -270,7 +275,7 @@ export default class ChaosRenderer extends React.Component {
     const {
       animate,
       renderFrame,
-      props: { isPlaying = true, showStats }
+      props: { isPlaying = true, showStats },
     } = this;
 
     if (isPlaying && !window.CHAOS_TIME.paused) {
@@ -321,7 +326,7 @@ export default class ChaosRenderer extends React.Component {
             width: "100%",
             height: "100%",
             alignItems: "center",
-            justifyContent: "center"
+            justifyContent: "center",
           }}
         >
           Your browser does not support WebGL :'(
