@@ -1,6 +1,6 @@
 {
   "name": "chaos-equations",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "Visualization and animation of real time dynamic chaos equations",
   "author": "Jered Danielson <jered@uw.edu>",
   "license": "MIT",
@@ -23,7 +23,6 @@
   "repository": {
     "url": "https://glitch.com/edit/#!/chaos-equations"
   },
-  "license": "MIT",
   "keywords": [
     "node",
     "glitch",

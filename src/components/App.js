@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import {
   stringToParams,
   paramsToString,
-  generateRandomParams
+  generateRandomParams,
 } from "./ChaosRenderer/utils.js";
 import { T_MIN, T_MAX } from "./ChaosRenderer/constants";
 import { getURLParams, sanitizeParamString } from "../utils.js";
@@ -74,6 +74,7 @@ const urlParams = getURLParams();
 const initialParamString = sanitizeParamString(urlParams.p);
 
 // Lookup table for trail persistence values based on slider
+// Starts at 0 and gets exponentially closer to 1
 const tpValMap = {};
 for (let i = 0; i < 11; i++) {
   tpValMap[i / 10] = ((i === 0 ? -1 : tpValMap[(i - 1) / 10]) + 1) / 2;
@@ -236,7 +237,7 @@ export default function App() {
           left: 0,
           display: "flex",
           flexDirection: "column",
-          maxHeight: "100%"
+          maxHeight: "100%",
         }}
       >
         <div style={{ position: "fixed", top: 0, right: 0, margin: "1rem" }}>
@@ -261,7 +262,7 @@ export default function App() {
               marginBottom: "2rem",
               padding: "1rem",
               fontSize: 12,
-              fontWeight: "bold"
+              fontWeight: "bold",
             }}
           >
             <div>{`mouse x(${mousePos.x}) y(${mousePos.y})`}</div>
@@ -314,7 +315,7 @@ export default function App() {
             margin: "0.5rem",
             marginBottom: "5rem",
             overflow: "hidden",
-            overflowY: "scroll"
+            overflowY: "scroll",
           }}
         >
           {openPanel === "config" && (
@@ -499,7 +500,7 @@ export default function App() {
           width: "100%",
           display: "flex",
           flexDirection: "column",
-          alignItems: "center"
+          alignItems: "center",
         }}
       >
         <div style={{ marginBottom: "1rem" }}>
@@ -657,7 +658,7 @@ export default function App() {
               setIsPlaying(isPlaying => !isPlaying);
             }
             setDraggingCanvas(false);
-          }
+          },
         }}
       />
     </div>
