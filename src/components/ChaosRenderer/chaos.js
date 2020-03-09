@@ -6,6 +6,8 @@ import { FLT_MAX, DELTA_PER_STEP, DELTA_MINIMUM } from "./constants.js";
 
 let history;
 
+const loader = require("@assemblyscript/loader");
+
 /**
  * Calculates chaos equation iterations
  * Note the tight coupling to the ChaosRenderer context for performance reasons
@@ -21,7 +23,7 @@ export default function chaos() {
     xPos,
     yPos,
     numSteps,
-    numIters,
+    numIters
   } = this.props;
 
   history =
@@ -118,4 +120,50 @@ export default function chaos() {
 
   this.t = t;
   this.rollingDelta = rollingDelta;
+}
+
+const defaultChaosParams = {
+  x_xx: 0,
+  x_yy: 0,
+  x_tt: 0,
+  x_xy: 0,
+  x_xt: 0,
+  x_yt: 0,
+  x_x: 0,
+  x_y: 0,
+  x_t: 0,
+  y_xx: 0,
+  y_yy: 0,
+  y_tt: 0,
+  y_xy: 0,
+  y_xt: 0,
+  y_yt: 0,
+  y_x: 0,
+  y_y: 0,
+  y_t: 0,
+  NUM_STEPS: 500,
+  NUM_ITERS: 800
+};
+
+export function loadChaos(config) {
+  const wasmMemory = new WebAssembly.Memory({ initial: 1, maximum: 200 });
+  return loader
+    .instantiateStreaming(fetch("optimized.wasm"), {
+      env: {
+        memory: wasmMemory
+      },
+      config: { ...defaultChaosParams, ...config }
+    })
+    .then(wasmInstance => {
+      window.wasmInstance = wasmInstance;
+      const { chaos } = wasmInstance;
+      const memory = new Float32Array(wasmInstance.memory.buffer);
+
+      return [
+        memory,
+        (t, xPos, yPos, scaleFactor, timeFactor) => {
+          return chaos(t, xPos, yPos, scaleFactor, timeFactor);
+        }
+      ];
+    });
 }

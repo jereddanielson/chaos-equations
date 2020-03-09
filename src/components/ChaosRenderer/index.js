@@ -3,7 +3,7 @@ const THREE = require("three");
 const statsjs = require("stats-js");
 const stats = new statsjs();
 
-import chaos from "./chaos.js";
+import chaos, { loadChaos } from "./chaos.js";
 
 /**
  * @typedef {Object} Color
@@ -55,153 +55,188 @@ export default class ChaosRenderer extends React.Component {
   componentDidMount() {
     // Try to start up THREE.js
     if (ChaosRenderer.isWebGLAvailable()) {
-      // Renderer and canvas
-      const { element, props } = this;
-      const renderer = new THREE.WebGLRenderer({
-        preserveDrawingBuffer: true, // allows for fancy fading trails
-        antialias: true,
-        powerPreference: "high-performance",
-      });
-      renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.setSize(element.offsetWidth, element.offsetHeight);
-      renderer.autoClearColor = false; // allows for fancy fading trails
-      element.innerHTML = "";
-      element.appendChild(renderer.domElement);
-      this.renderer = renderer;
+      const cfg = {
+        x_xx: this.props.params.x.xx,
+        x_yy: this.props.params.x.yy,
+        x_tt: this.props.params.x.tt,
+        x_xy: this.props.params.x.xy,
+        x_xt: this.props.params.x.xt,
+        x_yt: this.props.params.x.yt,
+        x_x: this.props.params.x.x,
+        x_y: this.props.params.x.y,
+        x_t: this.props.params.x.t,
+        y_xx: this.props.params.y.xx,
+        y_yy: this.props.params.y.yy,
+        y_tt: this.props.params.y.tt,
+        y_xy: this.props.params.y.xy,
+        y_xt: this.props.params.y.xt,
+        y_yt: this.props.params.y.yt,
+        y_x: this.props.params.y.x,
+        y_y: this.props.params.y.y,
+        y_t: this.props.params.y.t,
+        NUM_STEPS: this.props.numSteps,
+        NUM_ITERS: this.props.numIters
+      };
+      loadChaos(cfg).then(([wasmMemory, chaosFunction]) => {
+        window.wasmMemory = wasmMemory;
+        // Renderer and canvas
+        const { element, props } = this;
+        const renderer = new THREE.WebGLRenderer({
+          preserveDrawingBuffer: true, // allows for fancy fading trails
+          antialias: true,
+          powerPreference: "high-performance"
+        });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(element.offsetWidth, element.offsetHeight);
+        renderer.autoClearColor = false; // allows for fancy fading trails
+        element.innerHTML = "";
+        element.appendChild(renderer.domElement);
+        this.renderer = renderer;
 
-      // Camera
-      const aspectRatio = element.offsetWidth / element.offsetHeight;
-      const camera = new THREE.OrthographicCamera(
-        -1 * aspectRatio,
-        1 * aspectRatio,
-        1,
-        -1,
-        0.1,
-        20
-      );
-      camera.position.set(0, 0, 1);
-      this.aspectRatio = aspectRatio;
-      this.camera = camera;
-
-      // Scene and geometry
-      const {
-        numIters = 800,
-        numSteps = 500,
-        colorSpread = 4,
-        colorOffset = 0,
-        pointSize = 1,
-        scaleFactor = 1,
-        trailPersistence = 0.03,
-      } = props;
-      const scene = new THREE.Scene();
-      this.scene = scene;
-      const numPoints = numIters * numSteps;
-
-      const positionsArray = [];
-      const colorsArray = [];
-
-      for (var i = 0; i < numPoints; i++) {
-        // Positions start at 0 - center of screen
-        const x = 0;
-        const y = 0;
-        const z = 0;
-        positionsArray.push(x, y, z);
-
-        // Depending on color mode, create color for point
-        const c = ChaosRenderer.getWheelColor(
-          (i * colorSpread + colorOffset) % numIters
+        // Camera
+        const aspectRatio = element.offsetWidth / element.offsetHeight;
+        const camera = new THREE.OrthographicCamera(
+          -1 * aspectRatio,
+          1 * aspectRatio,
+          1,
+          -1,
+          0.1,
+          20
         );
-        colorsArray.push(c.r, c.g, c.b);
-      }
+        camera.position.set(0, 0, 1);
+        this.aspectRatio = aspectRatio;
+        this.camera = camera;
 
-      const geometry = new THREE.BufferGeometry();
-      geometry.addAttribute(
-        "position",
-        new THREE.Float32BufferAttribute(positionsArray, 3)
-      );
-      geometry.addAttribute(
-        "color",
-        new THREE.Float32BufferAttribute(colorsArray, 3)
-      );
-      geometry.computeBoundingSphere();
-      geometry.computeBoundingBox();
-      this.geometry = geometry;
+        // Scene and geometry
+        const {
+          numIters = 800,
+          numSteps = 500,
+          colorSpread = 4,
+          colorOffset = 0,
+          pointSize = 1,
+          scaleFactor = 1,
+          trailPersistence = 0.03
+        } = props;
+        const scene = new THREE.Scene();
+        this.scene = scene;
+        const numPoints = numIters * numSteps;
 
-      const { attenuation = 0.85 } = this.props;
-      const pointsMaterial = new THREE.PointsMaterial({
-        size: pointSize,
-        vertexColors: THREE.VertexColors,
-        transparent: true,
-        opacity: 1 - attenuation,
-        // blending: THREE.AdditiveBlending,
-      });
+        const positionsArray = [];
+        const colorsArray = [];
 
-      const points = new THREE.Points(geometry, pointsMaterial);
-      points.scale.x = scaleFactor;
-      points.scale.y = -scaleFactor;
-      camera.lookAt(0, 0, 0);
-      scene.add(points);
-      this.points = points;
+        wasmMemory.forEach((_ea, i) => {
+          wasmMemory[i] = 0;
+        });
 
-      // Fading trails plane
-      const tpVal = 1 - trailPersistence;
-      const fadeColor = new THREE.Color(tpVal, tpVal, tpVal);
-      const fadeGeometry = new THREE.PlaneGeometry(
-        camera.right * 8,
-        camera.top * 8
-      );
-      const fadeMaterial = new THREE.MeshBasicMaterial({
-        color: fadeColor,
-      });
-      fadeMaterial.blending = THREE.CustomBlending;
-      fadeMaterial.blendSrc = THREE.OneFactor;
-      fadeMaterial.blendDst = THREE.OneFactor;
-      fadeMaterial.blendEquation = THREE.ReverseSubtractEquation;
-      const fadePlane = new THREE.Mesh(fadeGeometry, fadeMaterial);
-      scene.add(fadePlane);
-      this.fadePlane = fadePlane;
+        for (var i = 0; i < numPoints; i++) {
+          // Positions start at 0 - center of screen
+          // positionsArray[3 * i] = 0;
+          // positionsArray[3 * (i + 1)] = 0;
+          // positionsArray[3 * (i + 2)] = 0;
+          positionsArray.push(0, 0, 0);
 
-      // Kick off scene render loop
-      // Normally this is bad but in this case I need it to be more performant
-      // than being kept in React state.
-      this.t = window.CHAOS_TIME.get();
-      window.CHAOS_TIME.addEventListener("skip", () => {
-        this.renderFrame();
-      });
-      this.applyChaos = chaos.bind(this);
-      this.animate();
-
-      // Event listeners
-      window.addEventListener("resize", this.onWindowResize);
-      [
-        "MouseEnter",
-        "MouseLeave",
-        "MouseDown",
-        "MouseMove",
-        "MouseUp",
-        "Wheel",
-        "Click",
-        "TouchStart",
-        "TouchMove",
-        "TouchEnd",
-      ].forEach(ea => {
-        if (typeof this.props[`on${ea}`] === "function") {
-          renderer.domElement.addEventListener(ea.toLowerCase(), e => {
-            e.preventDefault();
-            this.props[`on${ea}`](e, camera, renderer.domElement);
-          });
+          // Depending on color mode, create color for point
+          const c = ChaosRenderer.getWheelColor(
+            (i * colorSpread + colorOffset) % numIters
+          );
+          colorsArray.push(c.r, c.g, c.b);
         }
-      });
 
-      // Stats
-      stats.showPanel(0);
-      stats.dom.style.right = 0;
-      stats.dom.style.bottom = "2rem";
-      stats.dom.style.left = "";
-      stats.dom.style.top = "";
-      stats.dom.style.visibility = this.props.showStats ? "visible" : "hidden";
-      document.body.appendChild(stats.dom);
-      this.stats = stats;
+        const geometry = new THREE.BufferGeometry();
+        geometry.addAttribute(
+          "position",
+          new THREE.Float32BufferAttribute(positionsArray, 3)
+        );
+        geometry.addAttribute(
+          "color",
+          new THREE.Float32BufferAttribute(colorsArray, 3)
+        );
+        geometry.attributes.position.array = wasmMemory;
+        geometry.computeBoundingSphere();
+        geometry.computeBoundingBox();
+        this.geometry = geometry;
+
+        const { attenuation = 0.85 } = this.props;
+        const pointsMaterial = new THREE.PointsMaterial({
+          size: pointSize,
+          vertexColors: THREE.VertexColors,
+          transparent: true,
+          opacity: 1 - attenuation
+          // blending: THREE.AdditiveBlending,
+        });
+
+        const points = new THREE.Points(geometry, pointsMaterial);
+        points.scale.x = scaleFactor;
+        points.scale.y = -scaleFactor;
+        camera.lookAt(0, 0, 0);
+        scene.add(points);
+        this.points = points;
+
+        // Fading trails plane
+        const tpVal = 1 - trailPersistence;
+        const fadeColor = new THREE.Color(tpVal, tpVal, tpVal);
+        const fadeGeometry = new THREE.PlaneGeometry(
+          camera.right * 8,
+          camera.top * 8
+        );
+        const fadeMaterial = new THREE.MeshBasicMaterial({
+          color: fadeColor
+        });
+        fadeMaterial.blending = THREE.CustomBlending;
+        fadeMaterial.blendSrc = THREE.OneFactor;
+        fadeMaterial.blendDst = THREE.OneFactor;
+        fadeMaterial.blendEquation = THREE.ReverseSubtractEquation;
+        const fadePlane = new THREE.Mesh(fadeGeometry, fadeMaterial);
+        scene.add(fadePlane);
+        this.fadePlane = fadePlane;
+
+        // Kick off scene render loop
+        // Normally this is bad but in this case I need it to be more performant
+        // than being kept in React state.
+        this.t = window.CHAOS_TIME.get();
+        window.CHAOS_TIME.addEventListener("skip", () => {
+          this.renderFrame();
+        });
+        // this.applyChaos = chaos.bind(this);
+        this.animate();
+
+        // Event listeners
+        window.addEventListener("resize", this.onWindowResize);
+        [
+          "MouseEnter",
+          "MouseLeave",
+          "MouseDown",
+          "MouseMove",
+          "MouseUp",
+          "Wheel",
+          "Click",
+          "TouchStart",
+          "TouchMove",
+          "TouchEnd"
+        ].forEach(ea => {
+          if (typeof this.props[`on${ea}`] === "function") {
+            renderer.domElement.addEventListener(ea.toLowerCase(), e => {
+              e.preventDefault();
+              this.props[`on${ea}`](e, camera, renderer.domElement);
+            });
+          }
+        });
+
+        // Stats
+        stats.showPanel(0);
+        stats.dom.style.right = 0;
+        stats.dom.style.bottom = "2rem";
+        stats.dom.style.left = "";
+        stats.dom.style.top = "";
+        stats.dom.style.visibility = this.props.showStats
+          ? "visible"
+          : "hidden";
+        document.body.appendChild(stats.dom);
+        this.stats = stats;
+
+        // Make chaosFunction available
+        this.chaosFunction = chaosFunction;
+      });
     }
   }
 
@@ -275,7 +310,7 @@ export default class ChaosRenderer extends React.Component {
     const {
       animate,
       renderFrame,
-      props: { isPlaying = true, showStats },
+      props: { isPlaying = true, showStats }
     } = this;
 
     if (isPlaying && !window.CHAOS_TIME.paused) {
@@ -305,11 +340,22 @@ export default class ChaosRenderer extends React.Component {
   };
 
   renderFrame = () => {
-    const { geometry, renderer, scene, camera, applyChaos } = this;
-    this.t = window.CHAOS_TIME.get();
-    applyChaos();
-    geometry.attributes.position.needsUpdate = true; // required after the first render
-    renderer.render(scene, camera);
+    if (this.chaosFunction) {
+      const { geometry, renderer, scene, camera, applyChaos } = this;
+      this.t = window.CHAOS_TIME.get();
+      // applyChaos();
+      const newT = this.chaosFunction(
+        this.t,
+        this.props.xPos,
+        this.props.yPos,
+        this.props.scaleFactor,
+        this.props.timeFactor
+      );
+      this.t = newT;
+      window.CHAOS_TIME.set(newT);
+      geometry.attributes.position.needsUpdate = true; // required after the first render
+      renderer.render(scene, camera);
+    }
   };
 
   render() {
@@ -326,7 +372,7 @@ export default class ChaosRenderer extends React.Component {
             width: "100%",
             height: "100%",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: "center"
           }}
         >
           Your browser does not support WebGL :'(

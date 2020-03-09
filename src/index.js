@@ -4,3 +4,7 @@ import ReactDOM from "react-dom";
 import App from "./components/App.js";
 
 ReactDOM.render(<App />, document.querySelector("#app"));
+
+import { loadChaos } from "./components/ChaosRenderer/chaos";
+
+window.loadChaos = loadChaos;
