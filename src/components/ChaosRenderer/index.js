@@ -4,6 +4,7 @@ const statsjs = require("stats-js");
 const stats = new statsjs();
 
 import chaos from "./chaos.js";
+import { SIM_TICK_MS, SIM_FRAME_BUDGET_MS } from "./constants.js";
 
 /**
  * @typedef {Object} Color
@@ -169,10 +170,15 @@ export default class ChaosRenderer extends React.Component {
         this.renderFrame();
       });
       this.applyChaos = chaos.bind(this);
+      this.lastFrameTime = performance.now();
+      // Start mid-tick so timestamp jitter on a 60Hz display can't alternate
+      // between zero and two ticks per frame
+      this.tickAccumulator = SIM_TICK_MS / 2;
       this.animate();
 
       // Event listeners
       window.addEventListener("resize", this.onWindowResize);
+      document.addEventListener("visibilitychange", this.onVisibilityChange);
       [
         "MouseEnter",
         "MouseLeave",
@@ -269,39 +275,62 @@ export default class ChaosRenderer extends React.Component {
     this.aspectRatio = aspectRatio;
   };
 
+  // requestAnimationFrame doesn't fire in a hidden tab, so ignore the time spent
+  // hidden and the simulation resumes where it left off
+  onVisibilityChange = () => {
+    this.lastFrameTime = performance.now();
+  };
+
   animate = () => {
     const {
       animate,
-      renderFrame,
+      tick,
       props: { isPlaying = true, showStats },
     } = this;
 
     showStats && stats.begin();
 
+    const now = performance.now();
+    const elapsed = now - this.lastFrameTime;
+    this.lastFrameTime = now;
+
     if (isPlaying && !window.CHAOS_TIME.paused) {
-      renderFrame();
+      this.tickAccumulator += elapsed;
 
-      if (this.t > (this.props.tMax !== undefined ? this.props.tMax : 3)) {
-        this.t = this.props.tMin !== undefined ? this.props.tMin : -3;
-        if (
-          !this.props.repeat &&
-          !window.CHAOS_TIME.paused &&
-          this.props.onGenerateNewRandomParams
-        ) {
-          this.props.onGenerateNewRandomParams();
-        }
-      } else if (
-        this.t < (this.props.tMin !== undefined ? this.props.tMin : -3)
-      ) {
-        this.t = this.props.tMax;
+      while (this.tickAccumulator >= SIM_TICK_MS) {
+        tick();
+        this.tickAccumulator -= SIM_TICK_MS;
       }
-
-      window.CHAOS_TIME.set(this.t);
     }
 
     showStats && stats.end();
 
     requestAnimationFrame(animate);
+  };
+
+  /**
+   * Advances the simulation one fixed step. Each tick fades and draws to the
+   * canvas, so trails accumulate the same regardless of display refresh rate.
+   */
+  tick = () => {
+    this.renderFrame();
+
+    if (this.t > (this.props.tMax !== undefined ? this.props.tMax : 3)) {
+      this.t = this.props.tMin !== undefined ? this.props.tMin : -3;
+      if (
+        !this.props.repeat &&
+        !window.CHAOS_TIME.paused &&
+        this.props.onGenerateNewRandomParams
+      ) {
+        this.props.onGenerateNewRandomParams();
+      }
+    } else if (
+      this.t < (this.props.tMin !== undefined ? this.props.tMin : -3)
+    ) {
+      this.t = this.props.tMax;
+    }
+
+    window.CHAOS_TIME.set(this.t);
   };
 
   renderFrame = () => {
