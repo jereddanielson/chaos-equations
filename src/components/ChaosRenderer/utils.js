@@ -90,7 +90,9 @@ export function generateRandomParams() {
   paramsDimensions.forEach(eaDim => {
     result[eaDim] = {};
     paramsOrder.forEach(eaParam => {
-      result[eaDim][eaParam] = Math.floor(Math.random() * 3) - 1;
+      // 50% chance of 0, 25% each of 1 and -1, as in the original
+      const r = Math.floor(Math.random() * 4);
+      result[eaDim][eaParam] = r === 0 ? 1 : r === 1 ? -1 : 0;
     });
   });
   return result;

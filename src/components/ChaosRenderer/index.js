@@ -48,10 +48,37 @@ export default class ChaosRenderer extends React.Component {
    * @returns {Color}
    */
   static getRandColor(i) {
-    const r = Math.min(255, 50 + ((i * 11909) % 256));
-    const g = Math.min(255, 50 + ((i * 52973) % 256));
-    const b = Math.min(255, 50 + ((i * 44111) % 256));
+    const n = i + 1;
+    const r = Math.min(255, 50 + ((n * 11909) % 256));
+    const g = Math.min(255, 50 + ((n * 52973) % 256));
+    const b = Math.min(255, 50 + ((n * 44111) % 256));
     return { r: r / 255, g: g / 255, b: b / 255 };
+  }
+  /**
+   * Fills a color buffer so that each point is colored by its iteration
+   * @param {Float32Array} colors RGB values for numSteps * numIters points
+   * @param {object} options
+   * @param {number} options.numIters Iterations per step
+   * @param {number} options.colorSpread Multiplier applied to the iteration
+   * @param {number} options.colorOffset Added to the iteration
+   * @param {boolean} options.rainbowColors Use the color wheel, not the original palette
+   */
+  static fillColors(colors, { numIters, colorSpread, colorOffset, rainbowColors }) {
+    const getColor = rainbowColors
+      ? ChaosRenderer.getWheelColor
+      : ChaosRenderer.getRandColor;
+    const palette = [];
+    for (let iter = 0; iter < numIters; iter++) {
+      palette.push(
+        getColor(Math.round(iter * colorSpread + colorOffset) % numIters)
+      );
+    }
+    for (let i = 0; i < colors.length / 3; i++) {
+      const c = palette[i % numIters];
+      colors[i * 3] = c.r;
+      colors[i * 3 + 1] = c.g;
+      colors[i * 3 + 2] = c.b;
+    }
   }
   componentDidMount() {
     // Try to start up THREE.js
@@ -88,32 +115,25 @@ export default class ChaosRenderer extends React.Component {
       const {
         numIters = 800,
         numSteps = 500,
-        colorSpread = 4,
+        colorSpread = 1,
         colorOffset = 0,
+        rainbowColors = false,
         pointSize = 1,
-        scaleFactor = 1,
-        trailPersistence = 0.03,
+        trailPersistence = 1 - 10 / 255,
       } = props;
       const scene = new THREE.Scene();
       this.scene = scene;
       const numPoints = numIters * numSteps;
 
-      const positionsArray = [];
-      const colorsArray = [];
-
-      for (var i = 0; i < numPoints; i++) {
-        // Positions start at 0 - center of screen
-        const x = 0;
-        const y = 0;
-        const z = 0;
-        positionsArray.push(x, y, z);
-
-        // Depending on color mode, create color for point
-        const c = ChaosRenderer.getWheelColor(
-          (i * colorSpread + colorOffset) % numIters
-        );
-        colorsArray.push(c.r, c.g, c.b);
-      }
+      // Positions start at 0 - center of screen
+      const positionsArray = new Float32Array(numPoints * 3);
+      const colorsArray = new Float32Array(numPoints * 3);
+      ChaosRenderer.fillColors(colorsArray, {
+        numIters,
+        colorSpread,
+        colorOffset,
+        rainbowColors,
+      });
 
       const geometry = new THREE.BufferGeometry();
       geometry.addAttribute(
@@ -128,7 +148,7 @@ export default class ChaosRenderer extends React.Component {
       geometry.computeBoundingBox();
       this.geometry = geometry;
 
-      const { attenuation = 0.85 } = this.props;
+      const { attenuation = 0.937 } = this.props;
       const pointsMaterial = new THREE.PointsMaterial({
         size: pointSize,
         vertexColors: THREE.VertexColors,
@@ -136,17 +156,24 @@ export default class ChaosRenderer extends React.Component {
         opacity: 1 - attenuation,
         // blending: THREE.AdditiveBlending,
       });
+      // WebGL draws square points, so trim them to circles
+      pointsMaterial.onBeforeCompile = shader => {
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "#include <map_particle_fragment>",
+          "if (length(gl_PointCoord - 0.5) > 0.5) discard;\n#include <map_particle_fragment>"
+        );
+      };
 
+      // chaos.js applies zoom and panning, so this only flips y to point down
       const points = new THREE.Points(geometry, pointsMaterial);
-      points.scale.x = scaleFactor;
-      points.scale.y = -scaleFactor;
+      points.scale.y = -1;
       camera.lookAt(0, 0, 0);
       scene.add(points);
       this.points = points;
 
       // Fading trails plane
-      const tpVal = 1 - trailPersistence;
-      const fadeColor = new THREE.Color(tpVal, tpVal, tpVal);
+      const fade = 1 - trailPersistence;
+      const fadeColor = new THREE.Color(fade, fade, fade);
       const fadeGeometry = new THREE.PlaneGeometry(
         camera.right * 8,
         camera.top * 8
@@ -213,8 +240,10 @@ export default class ChaosRenderer extends React.Component {
 
   componentDidUpdate(prevProps, prevState) {
     const { props, geometry, points, fadePlane, stats } = this;
-    const { numIters, colorSpread, colorOffset } = this.props;
     let shouldRenderFrame = false;
+    if (prevProps.params !== props.params) {
+      this.clearOnNextRender = true;
+    }
     if (prevProps.scaleFactor !== props.scaleFactor) {
       shouldRenderFrame = true;
     }
@@ -233,8 +262,8 @@ export default class ChaosRenderer extends React.Component {
       shouldRenderFrame = true;
     }
     if (prevProps.trailPersistence !== props.trailPersistence) {
-      const tpVal = 1 - props.trailPersistence * props.trailPersistence;
-      fadePlane.material.color.setRGB(tpVal, tpVal, tpVal);
+      const fade = 1 - props.trailPersistence;
+      fadePlane.material.color.setRGB(fade, fade, fade);
       shouldRenderFrame = true;
     }
     if (prevProps.showStats !== props.showStats) {
@@ -242,17 +271,10 @@ export default class ChaosRenderer extends React.Component {
     }
     if (
       prevProps.colorOffset !== props.colorOffset ||
-      prevProps.colorSpread !== props.colorSpread
+      prevProps.colorSpread !== props.colorSpread ||
+      prevProps.rainbowColors !== props.rainbowColors
     ) {
-      const colorsArray = geometry.attributes.color.array;
-      for (let i = 0; i < colorsArray.length; i += 3) {
-        const c = ChaosRenderer.getWheelColor(
-          (i * colorSpread + colorOffset) % numIters
-        );
-        colorsArray[i] = c.r;
-        colorsArray[i + 1] = c.g;
-        colorsArray[i + 2] = c.b;
-      }
+      ChaosRenderer.fillColors(geometry.attributes.color.array, props);
       geometry.attributes.color.needsUpdate = true;
       shouldRenderFrame = true;
     }
@@ -300,6 +322,13 @@ export default class ChaosRenderer extends React.Component {
       while (this.tickAccumulator >= SIM_TICK_MS) {
         tick();
         this.tickAccumulator -= SIM_TICK_MS;
+
+        // Too slow to keep up, so drop the backlog and let the simulation run
+        // slower. Catching up would only add work and make it fall further behind.
+        if (performance.now() - now >= SIM_FRAME_BUDGET_MS) {
+          this.tickAccumulator %= SIM_TICK_MS;
+          break;
+        }
       }
     }
 
@@ -317,6 +346,7 @@ export default class ChaosRenderer extends React.Component {
 
     if (this.t > (this.props.tMax !== undefined ? this.props.tMax : 3)) {
       this.t = this.props.tMin !== undefined ? this.props.tMin : -3;
+      this.clearOnNextRender = true;
       if (
         !this.props.repeat &&
         !window.CHAOS_TIME.paused &&
@@ -338,6 +368,10 @@ export default class ChaosRenderer extends React.Component {
     this.t = window.CHAOS_TIME.get();
     applyChaos();
     geometry.attributes.position.needsUpdate = true; // required after the first render
+    if (this.clearOnNextRender) {
+      renderer.clear(true, false, false);
+      this.clearOnNextRender = false;
+    }
     renderer.render(scene, camera);
   };
 

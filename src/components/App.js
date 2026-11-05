@@ -5,7 +5,7 @@ import {
   paramsToString,
   generateRandomParams,
 } from "./ChaosRenderer/utils.js";
-import { T_MIN, T_MAX } from "./ChaosRenderer/constants";
+import { T_MIN, T_MAX, DEFAULT_SCALE } from "./ChaosRenderer/constants";
 import { getURLParams, sanitizeParamString } from "../utils.js";
 
 import ChaosRenderer from "./ChaosRenderer";
@@ -73,12 +73,14 @@ window.CHAOS_TIME = new CHAOS_TIME();
 const urlParams = getURLParams();
 const initialParamString = sanitizeParamString(urlParams.p);
 
-// Lookup table for trail persistence values based on slider
-// Starts at 0 and gets exponentially closer to 1
+// Lookup table for trail persistence values based on slider. Each frame fades
+// the screen by this many of 255 brightness levels. Includes all of the
+// original's settings: 255 (no trails), 10 (default), 2 and 0 (permanent).
+const FADE_LEVELS = [255, 128, 64, 32, 16, 10, 6, 4, 2, 1, 0];
 const tpValMap = {};
-for (let i = 0; i < 11; i++) {
-  tpValMap[i / 10] = ((i === 0 ? -1 : tpValMap[(i - 1) / 10]) + 1) / 2;
-}
+FADE_LEVELS.forEach((level, i) => {
+  tpValMap[i / 10] = 1 - level / 255;
+});
 
 export default function App() {
   const [isPlaying, setIsPlaying] = useState(true);
@@ -102,20 +104,21 @@ export default function App() {
   const [dragStartMouseY, setDragStartMouseY] = useState(0);
   const [touchStartScaleFactor, setTouchStartScaleFactor] = useState(1);
   const [touchStartDistance, setTouchStartDistance] = useState(0);
-  const [scaleFactor, setScaleFactor] = useState(1);
-  const [timeFactor, setTimeFactor] = useState(0.5);
+  const [scaleFactor, setScaleFactor] = useState(DEFAULT_SCALE);
+  const [timeFactor, setTimeFactor] = useState(1);
   const [draggingCanvas, setDraggingCanvas] = useState(false);
   const [repeat, setRepeat] = useState(false);
-  const [attenuation, setAttenuation] = useState(0.85);
-  const [trailPersistence, setTrailPersistence] = useState(0.6);
+  const [attenuation, setAttenuation] = useState(0.937);
+  const [trailPersistence, setTrailPersistence] = useState(0.5);
   const [openPanel, setOpenPanel] = useState("");
   const [history, setHistory] = useState(
     localStorage.getItem("chaos-equations-history") || ""
   );
   const [withinClickRadius, setWithinClickRadius] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const [colorSpread, setColorSpread] = useState(4);
+  const [colorSpread, setColorSpread] = useState(1);
   const [colorOffset, setColorOffset] = useState(0);
+  const [rainbowColors, setRainbowColors] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [pausedFromInfo, setPausedFromInfo] = useState(false);
   const [showTransformStats, setShowTransformStats] = useState(false);
@@ -126,7 +129,7 @@ export default function App() {
     window.CHAOS_TIME.set(tMin);
     window.CHAOS_TIME.play();
     setIsPlaying(true);
-    setScaleFactor(1);
+    setScaleFactor(DEFAULT_SCALE);
     setXPos(0);
     setYPos(0);
   }
@@ -399,7 +402,7 @@ export default function App() {
                 <label>Point Size</label>
                 <Slider
                   min={"0.5"}
-                  max={"4"}
+                  max={"10"}
                   step={"0.5"}
                   value={pointSize}
                   onChange={(e) => {
@@ -414,7 +417,7 @@ export default function App() {
                 <Slider
                   min={"0.5"}
                   max={"0.99"}
-                  step={"0.01"}
+                  step={"0.001"}
                   value={attenuation}
                   onChange={(e) => {
                     setAttenuation(parseFloat(e.target.value));
@@ -464,6 +467,16 @@ export default function App() {
                 >
                   {colorOffset}
                 </Slider>
+              </ConfigSection>
+              <ConfigSection>
+                <Checkbox
+                  value={rainbowColors}
+                  onChange={() => {
+                    setRainbowColors((rainbowColors) => !rainbowColors);
+                  }}
+                >
+                  Rainbow Colors
+                </Checkbox>
               </ConfigSection>
               <ConfigSection>
                 <Checkbox
@@ -568,6 +581,7 @@ export default function App() {
           attenuation,
           showStats,
           colorSpread,
+          rainbowColors,
           numIters,
           numSteps,
           pointSize,
@@ -577,7 +591,7 @@ export default function App() {
             const newParams = generateRandomParams();
             setParams(newParams);
             setParamsString(paramsToString(newParams));
-            setScaleFactor(1);
+            setScaleFactor(DEFAULT_SCALE);
             setXPos(0);
             setYPos(0);
           },

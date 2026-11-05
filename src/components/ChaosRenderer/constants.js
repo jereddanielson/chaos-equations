@@ -1,4 +1,5 @@
-export const FLT_MAX = 1e+37;
+export const OFF_SCREEN = 1e6;
+export const DEFAULT_SCALE = 0.25;
 export const DELTA_PER_STEP = 1e-5;
 export const DELTA_MINIMUM = 1e-7;
 export const T_MIN = -3;
