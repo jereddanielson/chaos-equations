@@ -7,7 +7,7 @@ export default function InfoTip(props) {
       className="chaos-info-tip"
       style={{ position: "relative", display: "inline-block" }}
     >
-      <span className="icon-info" />
+      <span className="bi bi-info-circle-fill" />
       <div
         style={{
           position: "absolute",

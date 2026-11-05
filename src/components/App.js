@@ -31,10 +31,10 @@ class CHAOS_TIME {
     return this.t;
   };
 
-  set = newT => {
+  set = (newT) => {
     this.t = newT;
     this.listeners["set"] &&
-      this.listeners["set"].forEach(func => {
+      this.listeners["set"].forEach((func) => {
         func(this.t);
       });
   };
@@ -49,7 +49,7 @@ class CHAOS_TIME {
 
   skip = () => {
     this.listeners["skip"] &&
-      this.listeners["skip"].forEach(func => {
+      this.listeners["skip"].forEach((func) => {
         func(this.t);
       });
   };
@@ -62,7 +62,7 @@ class CHAOS_TIME {
 
   removeEventListener = (event, func) => {
     const listeners = this.listeners[event] || [];
-    listeners.filter(ea => ea !== func);
+    listeners.filter((ea) => ea !== func);
     this.listeners[event] = listeners;
   };
 }
@@ -133,14 +133,14 @@ export default function App() {
 
   useEffect(() => {
     // Browser history state changes
-    window.addEventListener("popstate", e => {
+    window.addEventListener("popstate", (e) => {
       setParamsString(e.state);
       setParams(stringToParams(e.state));
       reset();
     });
     // Mouse movement
-    window.addEventListener("mousemove", e => {
-      setShowTransformStats(showTransformStats => {
+    window.addEventListener("mousemove", (e) => {
+      setShowTransformStats((showTransformStats) => {
         if (showTransformStats) {
           setMousePos({ x: e.clientX, y: e.clientY });
         }
@@ -170,17 +170,39 @@ export default function App() {
     }
   }, [paramsString]);
 
+  // onClick to handle changing parameters directly
+  const onClick = React.useCallback(
+    (dimension, varName, varValue, incrementValue) => {
+      setParams((oldParams) => {
+        let newValue = varValue + incrementValue;
+        if (Math.abs(newValue) >= 2) {
+          newValue = incrementValue * -1;
+        }
+
+        const newParams = {
+          ...oldParams,
+          [dimension]: { ...oldParams[dimension], [varName]: newValue },
+        };
+
+        setParamsString(paramsToString(newParams));
+
+        return newParams;
+      });
+    },
+    []
+  );
+
   return (
     <div
       style={{ width: "100%", height: "100%", position: "relative" }}
-      onContextMenu={e => {
-        e.preventDefault();
+      onContextMenu={(e) => {
+        if (e.target.id !== 'edit-params') e.preventDefault();
       }}
     >
       {infoOpen && (
         <Modal
           onClose={() => {
-            setPausedFromInfo(pausedFromInfo => {
+            setPausedFromInfo((pausedFromInfo) => {
               if (pausedFromInfo) {
                 setIsPlaying(true);
               }
@@ -211,7 +233,8 @@ export default function App() {
           <h3>Controls:</h3>
           <p>
             Set the 6-letter equation parameter code in the upper left of the
-            page.
+            page. You can also click the equation values to directly
+            increment/decrement them (left and right mouse buttons.)
           </p>
           <p>
             Click, drag, and zoom with the mouse to control position and scale.
@@ -225,8 +248,8 @@ export default function App() {
             mode, time factor, color wheel, etc.
           </p>
           <p>
-            Note to Mac users: I highly recommend you use Safari for this
-            webapp. It performs much better than Chromium for WebGL.
+            Note to Mac users: try Safari, it may or may not work better than
+            Chrome.
           </p>
         </Modal>
       )}
@@ -250,7 +273,7 @@ export default function App() {
               }
             }}
           >
-            <span className="icon-question" />
+            <span className="bi bi-question-circle-fill" />
           </Icon>
         </div>
         {showTransformStats && (
@@ -274,7 +297,7 @@ export default function App() {
           <EditableParamValue
             value={paramsString}
             exclusive
-            onSave={newValue => {
+            onSave={(newValue) => {
               setParamsString(newValue);
               setParams(stringToParams(newValue));
               if (paramsString !== newValue) {
@@ -283,14 +306,14 @@ export default function App() {
             }}
           />
         </div>
-        <ParamEquation {...{ params }} />
+        <ParamEquation {...{ params, onClick }} />
         <div>
           <div style={{ display: "flex" }}>
             <Button
               active={openPanel === "config"}
               style={{ marginLeft: "0.5rem" }}
               onClick={() => {
-                setOpenPanel(openPanel =>
+                setOpenPanel((openPanel) =>
                   openPanel !== "config" ? "config" : ""
                 );
               }}
@@ -301,7 +324,7 @@ export default function App() {
               active={openPanel === "history"}
               style={{ marginLeft: "0.5rem" }}
               onClick={() => {
-                setOpenPanel(openPanel =>
+                setOpenPanel((openPanel) =>
                   openPanel !== "history" ? "history" : ""
                 );
               }}
@@ -324,7 +347,7 @@ export default function App() {
                 <Checkbox
                   value={repeat}
                   onChange={() => {
-                    setRepeat(repeat => !repeat);
+                    setRepeat((repeat) => !repeat);
                   }}
                 >
                   Repeat Current Params
@@ -337,7 +360,7 @@ export default function App() {
                   max={"2"}
                   step={"0.01"}
                   value={timeFactor}
-                  onChange={e => {
+                  onChange={(e) => {
                     setTimeFactor(parseFloat(e.target.value));
                   }}
                 >
@@ -351,7 +374,7 @@ export default function App() {
                   max={"0"}
                   step={"0.01"}
                   value={tMin}
-                  onChange={e => {
+                  onChange={(e) => {
                     setTMin(parseFloat(e.target.value));
                   }}
                 >
@@ -365,7 +388,7 @@ export default function App() {
                   max={"6"}
                   step={"0.01"}
                   value={tMax}
-                  onChange={e => {
+                  onChange={(e) => {
                     setTMax(parseFloat(e.target.value));
                   }}
                 >
@@ -379,7 +402,7 @@ export default function App() {
                   max={"4"}
                   step={"0.5"}
                   value={pointSize}
-                  onChange={e => {
+                  onChange={(e) => {
                     setPointSize(parseFloat(e.target.value));
                   }}
                 >
@@ -393,7 +416,7 @@ export default function App() {
                   max={"0.99"}
                   step={"0.01"}
                   value={attenuation}
-                  onChange={e => {
+                  onChange={(e) => {
                     setAttenuation(parseFloat(e.target.value));
                   }}
                 >
@@ -407,7 +430,7 @@ export default function App() {
                   max={"1"}
                   step={"0.1"}
                   value={trailPersistence}
-                  onChange={e => {
+                  onChange={(e) => {
                     setTrailPersistence(parseFloat(e.target.value));
                   }}
                 >
@@ -421,7 +444,7 @@ export default function App() {
                   max={"10"}
                   step={"1"}
                   value={colorSpread}
-                  onChange={e => {
+                  onChange={(e) => {
                     setColorSpread(parseFloat(e.target.value));
                   }}
                 >
@@ -435,7 +458,7 @@ export default function App() {
                   max={"1"}
                   step={".01"}
                   value={colorOffset}
-                  onChange={e => {
+                  onChange={(e) => {
                     setColorOffset(parseFloat(e.target.value));
                   }}
                 >
@@ -446,7 +469,7 @@ export default function App() {
                 <Checkbox
                   value={showStats}
                   onChange={() => {
-                    setShowStats(showStats => !showStats);
+                    setShowStats((showStats) => !showStats);
                   }}
                 >
                   Show FPS
@@ -457,7 +480,7 @@ export default function App() {
                   value={showTransformStats}
                   onChange={() => {
                     setShowTransformStats(
-                      showTransformStats => !showTransformStats
+                      (showTransformStats) => !showTransformStats
                     );
                   }}
                 >
@@ -507,13 +530,13 @@ export default function App() {
           <Icon
             style={{ margin: "0 0.5rem" }}
             onClick={() => {
-              setIsPlaying(isPlaying => !isPlaying);
+              setIsPlaying((isPlaying) => !isPlaying);
             }}
           >
             {isPlaying ? (
-              <span className="icon-pause2" />
+              <span className="bi bi-pause-fill" />
             ) : (
-              <span className="icon-play3" />
+              <span className="bi bi-play-fill" />
             )}
           </Icon>
           <Icon
@@ -526,7 +549,7 @@ export default function App() {
               reset();
             }}
           >
-            <span className={`icon-shuffle`} />
+            <span className="bi bi-skip-end-fill" />
           </Icon>
         </div>
         <TimeStrip {...{ tMin, tMax }} />
@@ -560,11 +583,11 @@ export default function App() {
           },
           onWheel: (e, camera) => {
             const dy = Math.min(Math.max(e.deltaY / -1000, -0.5), 0.5);
-            setScaleFactor(oldScaleFactor => {
+            setScaleFactor((oldScaleFactor) => {
               return oldScaleFactor * (1 + dy);
             });
           },
-          onMouseDown: e => {
+          onMouseDown: (e) => {
             setDraggingCanvas(true);
             setDragStartMouseX(e.clientX);
             setDragStartMouseY(e.clientY);
@@ -600,10 +623,10 @@ export default function App() {
           onClick: () => {
             // On click, play/pause if mouse hasn't moved much
             if (withinClickRadius) {
-              setIsPlaying(isPlaying => !isPlaying);
+              setIsPlaying((isPlaying) => !isPlaying);
             }
           },
-          onTouchStart: e => {
+          onTouchStart: (e) => {
             setDraggingCanvas(true);
             if (e.touches.length === 1) {
               setDragStartMouseX(e.touches[0].clientX);
@@ -655,7 +678,7 @@ export default function App() {
           onTouchEnd: () => {
             // On tap, play/pause if mouse hasn't moved much
             if (draggingCanvas && withinClickRadius) {
-              setIsPlaying(isPlaying => !isPlaying);
+              setIsPlaying((isPlaying) => !isPlaying);
             }
             setDraggingCanvas(false);
           },

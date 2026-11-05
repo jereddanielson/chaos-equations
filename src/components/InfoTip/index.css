@@ -2,12 +2,12 @@
   cursor: pointer;
 }
 
-.chaos-info-tip .icon-info {
+.chaos-info-tip .bi-info-circle-fill {
   color: #eee;
   opacity: 0.75;
 }
 
-.chaos-info-tip:hover .icon-info {
+.chaos-info-tip:hover .bi-info-circle-fill {
   opacity: 1;
 }
 

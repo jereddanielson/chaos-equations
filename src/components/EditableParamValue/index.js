@@ -39,6 +39,7 @@ export default function EditableValue(props) {
 
   return (
     <div
+      id="edit-params"
       onClick={() => {
         !editing && handleEditStart();
       }}

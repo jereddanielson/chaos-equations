@@ -3,7 +3,7 @@ import React from "react";
 export default function TimeStrip(props) {
   const [time, setTime] = React.useState(0);
   React.useEffect(() => {
-    const handleSetTime = t => {
+    const handleSetTime = (t) => {
       setTime(t);
     };
 
@@ -16,7 +16,7 @@ export default function TimeStrip(props) {
   const formattedTime = time.toFixed(4);
   const currentRatio = Math.abs(time - props.tMin) / (props.tMax - props.tMin);
 
-  const setNewT = e => {
+  const setNewT = (e) => {
     const barWidth = e.target.offsetWidth;
     const clickPos = e.clientX;
     const newT = (clickPos / barWidth) * (props.tMax - props.tMin) + props.tMin;
@@ -26,34 +26,34 @@ export default function TimeStrip(props) {
 
   return (
     <div
-      onMouseDown={e => {
+      onMouseDown={(e) => {
         e.preventDefault();
         setNewT(e);
         window.CHAOS_TIME.pause();
       }}
-      onMouseMove={e => {
+      onMouseMove={(e) => {
         e.preventDefault();
         if (window.CHAOS_TIME.paused) {
           setNewT(e);
         }
       }}
-      onMouseUp={e => {
+      onMouseUp={(e) => {
         e.preventDefault();
         // setNewT(e);
         window.CHAOS_TIME.play();
       }}
-      onTouchStart={e => {
+      onTouchStart={(e) => {
         // e.preventDefault();
         setNewT(e.touches[0]);
         window.CHAOS_TIME.pause();
       }}
-      onTouchMove={e => {
+      onTouchMove={(e) => {
         // e.preventDefault();
         if (window.CHAOS_TIME.paused) {
           setNewT(e.touches[0]);
         }
       }}
-      onTouchEnd={e => {
+      onTouchEnd={(e) => {
         // e.preventDefault();
         // setNewT(e.touches[0]);
         window.CHAOS_TIME.play();
@@ -84,7 +84,8 @@ export default function TimeStrip(props) {
             top: "50%",
             right: 0,
             transform: `translate(${currentRatio <= 0.5 ? 100 : 0}%, -50%)`,
-            transition: "transform 0.3s ease-out",
+            transition:
+              "transform 0.3s cubic-bezier(0.250, 0.250, 0.250, 1.000)",
             padding: "0 16px",
             userSelect: "none",
           }}

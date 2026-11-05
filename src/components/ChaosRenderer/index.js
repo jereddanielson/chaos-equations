@@ -270,13 +270,13 @@ export default class ChaosRenderer extends React.Component {
   };
 
   animate = () => {
-    showStats && stats.begin();
-
     const {
       animate,
       renderFrame,
       props: { isPlaying = true, showStats },
     } = this;
+
+    showStats && stats.begin();
 
     if (isPlaying && !window.CHAOS_TIME.paused) {
       renderFrame();
