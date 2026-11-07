@@ -5,5 +5,6 @@ export const T_MIN = -3;
 export const T_MAX = 3;
 export const SIM_TICK_MS = 1000 / 60;
 export const SIM_FRAME_BUDGET_MS = 16;
+export const RENDER_SCALE = 2; // canvas pixels per device pixel
 export const paramsDimensions = ["x", "y"];
 export const paramsOrder = ["xx", "yy", "tt", "xy", "xt", "yt", "x", "y", "t"];

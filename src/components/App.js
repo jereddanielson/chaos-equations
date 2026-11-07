@@ -338,7 +338,7 @@ export default function App() {
             margin: "0.5rem",
             marginBottom: "5rem",
             overflow: "hidden",
-            overflowY: "scroll",
+            overflowY: "auto",
           }}
         >
           {openPanel === "config" && (

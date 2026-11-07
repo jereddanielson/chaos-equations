@@ -4,7 +4,11 @@ const statsjs = require("stats-js");
 const stats = new statsjs();
 
 import chaos from "./chaos.js";
-import { SIM_TICK_MS, SIM_FRAME_BUDGET_MS } from "./constants.js";
+import {
+  SIM_TICK_MS,
+  SIM_FRAME_BUDGET_MS,
+  RENDER_SCALE,
+} from "./constants.js";
 
 /**
  * @typedef {Object} Color
@@ -63,7 +67,7 @@ export default class ChaosRenderer extends React.Component {
         antialias: true,
         powerPreference: "high-performance",
       });
-      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setPixelRatio(window.devicePixelRatio * RENDER_SCALE);
       renderer.setSize(element.offsetWidth, element.offsetHeight);
       renderer.autoClearColor = false; // allows for fancy fading trails
       element.innerHTML = "";
@@ -271,6 +275,8 @@ export default class ChaosRenderer extends React.Component {
     camera.bottom = -1;
     camera.top = 1;
     camera.updateProjectionMatrix();
+    // Browser zoom changes devicePixelRatio and fires a resize
+    renderer.setPixelRatio(window.devicePixelRatio * RENDER_SCALE);
     renderer.setSize(element.offsetWidth, element.offsetHeight);
     this.aspectRatio = aspectRatio;
   };
