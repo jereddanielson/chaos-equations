@@ -4,7 +4,10 @@
 import defaultParams from "./defaultParams.js";
 import { FLT_MAX, DELTA_PER_STEP, DELTA_MINIMUM } from "./constants.js";
 
-let history;
+// Previous position of each iteration, for measuring how fast points move.
+// Typed arrays so the inner loop doesn't allocate.
+let historyX = new Float64Array(0);
+let historyY = new Float64Array(0);
 
 /**
  * Calculates chaos equation iterations
@@ -24,13 +27,11 @@ export default function chaos() {
     numIters,
   } = this.props;
 
-  history =
-    history ||
-    Array(numIters)
-      .fill("")
-      .map(() => {
-        return { x: 0, y: 0 };
-      });
+  if (historyX.length !== numIters) {
+    historyX = new Float64Array(numIters);
+    historyY = new Float64Array(numIters);
+  }
+  const positions = geometry.attributes.position.array;
 
   // Smooth out stepping speed
   const delta = DELTA_PER_STEP;
@@ -85,8 +86,8 @@ export default function chaos() {
         screenXPos < camera.right &&
         screenYPos < camera.top
       ) {
-        const dx = history[iter] ? history[iter].x - nx : nx;
-        const dy = history[iter] ? history[iter].y - ny : ny;
+        const dx = historyX[iter] - nx;
+        const dy = historyY[iter] - ny;
         const dist = 500 * Math.sqrt(dx * dx + dy * dy);
         rollingDelta = Math.min(
           rollingDelta,
@@ -95,15 +96,12 @@ export default function chaos() {
         noPointsOnScreen = false;
       }
 
-      history[iter] = { x: nx, y: ny };
+      historyX[iter] = nx;
+      historyY[iter] = ny;
 
       // Update geometry
-      geometry.attributes.position.array[
-        (step * numIters + iter) * 3
-      ] = screenXPos;
-      geometry.attributes.position.array[
-        (step * numIters + iter) * 3 + 1
-      ] = screenYPos;
+      positions[(step * numIters + iter) * 3] = screenXPos;
+      positions[(step * numIters + iter) * 3 + 1] = screenYPos;
       x = nx;
       y = ny;
     }

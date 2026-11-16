@@ -4,9 +4,14 @@ const statsjs = require("stats-js");
 const stats = new statsjs();
 
 import chaos from "./chaos.js";
+import { cullOverdraw, getMaxLayers } from "./overdraw.js";
 import {
   SIM_TICK_MS,
   SIM_FRAME_BUDGET_MS,
+  SIM_MAX_TICKS_PER_FRAME,
+  OVERDRAW_MIN_CULL_RATIO,
+  OVERDRAW_RECHECK_TICKS,
+  OVERDRAW_SAMPLE_STRIDE,
   RENDER_SCALE,
 } from "./constants.js";
 
@@ -64,7 +69,10 @@ export default class ChaosRenderer extends React.Component {
       const { element, props } = this;
       const renderer = new THREE.WebGLRenderer({
         preserveDrawingBuffer: true, // allows for fancy fading trails
-        antialias: true,
+        // Points are axis-aligned squares, so multisampling adds little, and
+        // it makes stacked points several times more expensive to blend.
+        // cullOverdraw also depends on it being off.
+        antialias: false,
         powerPreference: "high-performance",
       });
       renderer.setPixelRatio(window.devicePixelRatio * RENDER_SCALE);
@@ -303,9 +311,25 @@ export default class ChaosRenderer extends React.Component {
     if (isPlaying && !window.CHAOS_TIME.paused) {
       this.tickAccumulator += elapsed;
 
+      let ticks = 0;
       while (this.tickAccumulator >= SIM_TICK_MS) {
         tick();
         this.tickAccumulator -= SIM_TICK_MS;
+        ticks++;
+
+        // When the device can't keep up, slow the simulation down instead of
+        // catching up. Catching up means more ticks in the next frame, which
+        // makes that frame even longer, until the page locks up.
+        if (
+          ticks >= SIM_MAX_TICKS_PER_FRAME ||
+          performance.now() - now >= SIM_FRAME_BUDGET_MS
+        ) {
+          this.tickAccumulator = Math.min(
+            this.tickAccumulator,
+            SIM_TICK_MS / 2
+          );
+          break;
+        }
       }
     }
 
@@ -340,12 +364,60 @@ export default class ChaosRenderer extends React.Component {
   };
 
   renderFrame = () => {
-    const { geometry, renderer, scene, camera, applyChaos } = this;
+    const { geometry, renderer, scene, camera, points, applyChaos } = this;
     this.t = window.CHAOS_TIME.get();
     applyChaos();
+    this.cullOverdraw();
     geometry.attributes.position.needsUpdate = true; // required after the first render
     renderer.render(scene, camera);
   };
+
+  /**
+   * Drops points that are hidden under other points, see overdraw.js.
+   * Culling never changes the picture, so it only runs while it pays for
+   * itself. While the points are spread out, a cheap sampled pass checks
+   * every few ticks whether they have started piling up.
+   */
+  cullOverdraw() {
+    const { geometry, renderer, camera, points } = this;
+    if (this.overdrawCooldown > 0) {
+      this.overdrawCooldown--;
+      return;
+    }
+    const positions = geometry.attributes.position.array;
+    const view = {
+      left: camera.left,
+      right: camera.right,
+      bottom: camera.bottom,
+      top: camera.top,
+      scaleX: points.scale.x,
+      scaleY: points.scale.y,
+      width: renderer.domElement.width,
+      height: renderer.domElement.height,
+      pointSize: points.material.size * renderer.getPixelRatio(),
+    };
+    const maxLayers = getMaxLayers(points.material.opacity);
+    const worthwhile = (positions.length / 3) * OVERDRAW_MIN_CULL_RATIO;
+
+    if (!this.overdrawActive) {
+      const estimate = cullOverdraw(
+        positions,
+        view,
+        maxLayers,
+        OVERDRAW_SAMPLE_STRIDE
+      );
+      if (estimate < worthwhile) {
+        this.overdrawCooldown = OVERDRAW_RECHECK_TICKS;
+        return;
+      }
+      this.overdrawActive = true;
+    }
+
+    if (cullOverdraw(positions, view, maxLayers) < worthwhile) {
+      this.overdrawActive = false;
+      this.overdrawCooldown = OVERDRAW_RECHECK_TICKS;
+    }
+  }
 
   render() {
     return (
